@@ -17,26 +17,22 @@
 package storage
 
 import (
-	"encoding/binary"
-
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v4"
 )
 
-func GetLemmaID(db *badger.DB, lemma string) (uint32, error) {
-	var tokenID uint32
-	err := db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(EncodeLemmaKey(lemma))
-		if err != nil {
-			return err
-		}
+// DB is a wrapper around badger.DB providing concrete
+// methods for adding/retrieving collocation information.
+type DB struct {
+	bdb *badger.DB
+}
 
-		tokenIDBytes, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
+// Close closes the internal Badger database.
+// It is necessary to perform the close especially
+// in cases of data writing.
+func (db *DB) Close() error {
+	return db.bdb.Close()
+}
 
-		tokenID = binary.LittleEndian.Uint32(tokenIDBytes)
-		return nil
-	})
-	return tokenID, err
+func (db *DB) Size() (int64, int64) {
+	return db.bdb.Size()
 }

@@ -24,10 +24,11 @@ const (
 	LemmaToIDPrefix   byte = 0x00 // "lemma" -> tokenID
 	SingleTokenPrefix byte = 0x01 // tokenID -> frequency
 	PairTokenPrefix   byte = 0x02 // (tokenID1, tokenID2) -> frequency
+	IDToLemmaPrefix   byte = 0x03 // tokenID -> "lemma" (reverse lookup)
 )
 
-// EncodeLemmaKey creates a byte key representation for Lemma -> Lemma ID entries
-func EncodeLemmaKey(lemma string) []byte {
+// encodeLemmaKey creates a byte key representation for Lemma -> Lemma ID entries
+func encodeLemmaKey(lemma string) []byte {
 	lemmaBytes := []byte(lemma)
 	key := make([]byte, 1+len(lemmaBytes))
 	key[0] = LemmaToIDPrefix
@@ -35,8 +36,40 @@ func EncodeLemmaKey(lemma string) []byte {
 	return key
 }
 
-func EncodeTokenID(tokenID uint32) []byte {
+func decodeFrequency(data []byte) uint32 {
+	return binary.LittleEndian.Uint32(data)
+}
+
+func encodeFrequency(freq uint32) []byte {
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, freq)
+	return buf
+}
+
+func encodePairTokenKey(token1ID, token2ID uint32) []byte {
+	key := make([]byte, 9)
+	key[0] = PairTokenPrefix
+	binary.LittleEndian.PutUint32(key[1:5], token1ID)
+	binary.LittleEndian.PutUint32(key[5:9], token2ID)
+	return key
+}
+
+func encodeSingleTokenKey(tokenID uint32) []byte {
+	key := make([]byte, 5)
+	key[0] = SingleTokenPrefix
+	binary.LittleEndian.PutUint32(key[1:5], tokenID)
+	return key
+}
+
+func encodeTokenID(tokenID uint32) []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, tokenID)
 	return buf
+}
+
+func encodeIDToLemmaKey(tokenID uint32) []byte {
+	key := make([]byte, 5)
+	key[0] = IDToLemmaPrefix
+	binary.LittleEndian.PutUint32(key[1:5], tokenID)
+	return key
 }
