@@ -11,6 +11,7 @@ import (
 
 func main() {
 	limit := flag.Int("limit", 10, "max num. of matching items to show")
+	corpusSize := flag.Int("corpus-size", 100000000, "max num. of matching items to show")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "search - search for collocations of a provided lemma\n\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n\t%s [options] [db_path] [lemma]\n\t", filepath.Base(os.Args[0]))
@@ -22,7 +23,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "ERROR: ", err)
 		os.Exit(1)
 	}
-	ans, err := db.CalculateLogDice(flag.Arg(1), *limit)
+	ans, err := db.CalculateMeasures(flag.Arg(1), *limit, *corpusSize)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ERROR: ", err)
 		os.Exit(1)

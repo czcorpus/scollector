@@ -170,13 +170,13 @@ func (db *DB) getSingleTokenFreqTx(txn *badger.Txn, tokenID uint32, frequency *u
 	})
 }
 
-func (db *DB) CalculateLogDice(lemma string, limit int) ([]LogDiceResult, error) {
+func (db *DB) CalculateMeasures(lemma string, corpusSize int, limit int) ([]Collocation, error) {
 	variants, err := db.GetLemmaIDsByPrefix(lemma)
 	if err == badger.ErrKeyNotFound {
-		return []LogDiceResult{}, fmt.Errorf("failed to find matching lemma(s): %w", err)
+		return []Collocation{}, fmt.Errorf("failed to find matching lemma(s): %w", err)
 	}
 
-	var results []LogDiceResult
+	var results []Collocation
 
 	for _, lemmaMatch := range variants {
 		// First, get F(x) - frequency of target lemma
@@ -222,17 +222,18 @@ func (db *DB) CalculateLogDice(lemma string, limit int) ([]LogDiceResult, error)
 
 				// Calculate log dice: 14 + log2(2*F(x,y) / (F(x) + F(y)))
 				logDice := 14.0 + math.Log2(float64(2*pairFreq)/float64(targetFreq+secondFreq))
-
+				tscore := (float64(pairFreq) - float64(targetFreq)*float64(secondFreq)/float64(corpusSize)) / math.Sqrt(float64(pairFreq))
 				secondLemma, err := db.getLemmaByIDTxn(txn, secondLemmaID)
 				if err != nil {
 					// TODO
 					continue
 				}
 
-				results = append(results, LogDiceResult{
+				results = append(results, Collocation{
 					RawLemma:     lemmaMatch.Value,
 					RawCollocate: secondLemma,
 					LogDice:      logDice,
+					TScore:       tscore,
 				})
 			}
 			return nil
@@ -257,24 +258,25 @@ func splitByLastUnderscore(s string) (string, string) {
 
 // ------------------------------------
 
-type LogDiceResult struct {
+type Collocation struct {
 	RawLemma     string
 	RawCollocate string
 	LogDice      float64
+	TScore       float64
 }
 
-func (res *LogDiceResult) LemmaAndFn() (string, string) {
+func (res *Collocation) LemmaAndFn() (string, string) {
 	return splitByLastUnderscore(res.RawLemma)
 }
 
-func (res *LogDiceResult) CollocateAndFn() (string, string) {
+func (res *Collocation) CollocateAndFn() (string, string) {
 	return splitByLastUnderscore(res.RawCollocate)
 }
 
-func (ldr LogDiceResult) TabString() string {
+func (ldr Collocation) TabString() string {
 	lemma1, deprel1 := splitByLastUnderscore(ldr.RawLemma)
 	lemma2, deprel2 := splitByLastUnderscore(ldr.RawCollocate)
-	return fmt.Sprintf("%s\t(%s)\t%s\t(%s)\t%01.2f", lemma1, deprel1, lemma2, deprel2, ldr.LogDice)
+	return fmt.Sprintf("%s\t(%s)\t%s\t(%s)\t%01.2f\t%01.2f", lemma1, deprel1, lemma2, deprel2, ldr.LogDice, ldr.TScore)
 }
 
 // --------
