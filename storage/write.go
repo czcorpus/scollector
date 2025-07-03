@@ -80,7 +80,8 @@ func (db *DB) StoreLemmaTx(txn *badger.Txn, lemma string, tokenID uint32) error 
 func (db *DB) StoreData(
 	tidSeq *tokenIDSequence,
 	singleFreqs map[string]int,
-	pairFreqs map[[2]string]int) error {
+	pairFreqs map[[2]string]int,
+	minPairFreq int) error {
 
 	// use singleFreqs as source of lemmas and create indexes
 	for lemma := range singleFreqs {
@@ -111,6 +112,9 @@ func (db *DB) StoreData(
 
 	// Process pair frequencies
 	for lemmaPair, pairFreq := range pairFreqs {
+		if pairFreq < minPairFreq {
+			continue
+		}
 		err := db.bdb.Update(func(txn *badger.Txn) error {
 			if err := db.StorePairTokenFreqTx(
 				txn,

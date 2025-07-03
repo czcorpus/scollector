@@ -170,7 +170,7 @@ func (db *DB) getSingleTokenFreqTx(txn *badger.Txn, tokenID uint32, frequency *u
 	})
 }
 
-func (db *DB) CalculateLogDice(lemma string) ([]LogDiceResult, error) {
+func (db *DB) CalculateLogDice(lemma string, limit int) ([]LogDiceResult, error) {
 	variants, err := db.GetLemmaIDsByPrefix(lemma)
 	if err == badger.ErrKeyNotFound {
 		return []LogDiceResult{}, fmt.Errorf("failed to find matching lemma(s): %w", err)
@@ -241,8 +241,8 @@ func (db *DB) CalculateLogDice(lemma string) ([]LogDiceResult, error) {
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].LogDice > results[j].LogDice
 	})
-	if len(results) > 20 {
-		results = results[:20]
+	if len(results) > limit {
+		results = results[:limit]
 	}
 	return results, err
 }
