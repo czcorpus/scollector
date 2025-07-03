@@ -230,9 +230,9 @@ func (db *DB) CalculateLogDice(lemma string) ([]LogDiceResult, error) {
 				}
 
 				results = append(results, LogDiceResult{
-					Lemma:     lemmaMatch.Value,
-					Collocate: secondLemma,
-					LogDice:   logDice,
+					RawLemma:     lemmaMatch.Value,
+					RawCollocate: secondLemma,
+					LogDice:      logDice,
 				})
 			}
 			return nil
@@ -255,17 +255,29 @@ func splitByLastUnderscore(s string) (string, string) {
 	return s[:lastIndex], s[lastIndex+1:]
 }
 
+// ------------------------------------
+
 type LogDiceResult struct {
-	Lemma     string
-	Collocate string
-	LogDice   float64
+	RawLemma     string
+	RawCollocate string
+	LogDice      float64
+}
+
+func (res *LogDiceResult) LemmaAndFn() (string, string) {
+	return splitByLastUnderscore(res.RawLemma)
+}
+
+func (res *LogDiceResult) CollocateAndFn() (string, string) {
+	return splitByLastUnderscore(res.RawCollocate)
 }
 
 func (ldr LogDiceResult) TabString() string {
-	lemma1, deprel1 := splitByLastUnderscore(ldr.Lemma)
-	lemma2, deprel2 := splitByLastUnderscore(ldr.Collocate)
+	lemma1, deprel1 := splitByLastUnderscore(ldr.RawLemma)
+	lemma2, deprel2 := splitByLastUnderscore(ldr.RawCollocate)
 	return fmt.Sprintf("%s\t(%s)\t%s\t(%s)\t%01.2f", lemma1, deprel1, lemma2, deprel2, ldr.LogDice)
 }
+
+// --------
 
 func OpenDB(path string) (*DB, error) {
 	opts := badger.DefaultOptions(path).
