@@ -39,6 +39,10 @@ func (db *DB) Close() error {
 	return nil
 }
 
+func (db *DB) Flush() error {
+	return db.bdb.DropAll()
+}
+
 func (db *DB) Size() (int64, int64) {
 	return db.bdb.Size()
 }
