@@ -29,8 +29,14 @@ type DB struct {
 // Close closes the internal Badger database.
 // It is necessary to perform the close especially
 // in cases of data writing.
+// It is possible to call the method on nil instance
+// or on an uninitialized DB object, in which case
+// it is a NOP.
 func (db *DB) Close() error {
-	return db.bdb.Close()
+	if db != nil && db.bdb != nil {
+		return db.bdb.Close()
+	}
+	return nil
 }
 
 func (db *DB) Size() (int64, int64) {
