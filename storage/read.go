@@ -26,6 +26,17 @@ import (
 	"github.com/dgraph-io/badger/v4"
 )
 
+const (
+	sortByLogDice SortingMeasure = "ldice"
+	sortByTScore  SortingMeasure = "tscore"
+)
+
+type SortingMeasure string
+
+func (m SortingMeasure) Validate() bool {
+	return m == sortByLogDice || m == sortByTScore
+}
+
 // GetLemmaID returns numeric representation of a provided
 // lemma. In case the lemma is not found, zero is returned
 // (i.e. no error).
@@ -170,7 +181,16 @@ func (db *DB) getSingleTokenFreqTx(txn *badger.Txn, tokenID uint32, frequency *u
 	})
 }
 
-func (db *DB) CalculateMeasures(lemma string, corpusSize int, limit int) ([]Collocation, error) {
+func (db *DB) CalculateMeasures(lemma string, corpusSize int, limit int, sortBy SortingMeasure) ([]Collocation, error) {
+	if limit < 0 {
+		panic("CalculateMeasures - invalid limit value")
+	}
+	if corpusSize < 0 {
+		panic("CalculateMeasures - invalid corpusSize value")
+	}
+	if !sortBy.Validate() {
+		panic("CalculateMeasures - invalid sortBy value")
+	}
 	variants, err := db.GetLemmaIDsByPrefix(lemma)
 	if err == badger.ErrKeyNotFound {
 		return []Collocation{}, fmt.Errorf("failed to find matching lemma(s): %w", err)
@@ -219,8 +239,6 @@ func (db *DB) CalculateMeasures(lemma string, corpusSize int, limit int) ([]Coll
 				if err != nil {
 					continue // Skip if we can't find single freq
 				}
-
-				// Calculate log dice: 14 + log2(2*F(x,y) / (F(x) + F(y)))
 				logDice := 14.0 + math.Log2(float64(2*pairFreq)/float64(targetFreq+secondFreq))
 				tscore := (float64(pairFreq) - float64(targetFreq)*float64(secondFreq)/float64(corpusSize)) / math.Sqrt(float64(pairFreq))
 				secondLemma, err := db.getLemmaByIDTxn(txn, secondLemmaID)
@@ -239,9 +257,16 @@ func (db *DB) CalculateMeasures(lemma string, corpusSize int, limit int) ([]Coll
 			return nil
 		})
 	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].LogDice > results[j].LogDice
-	})
+	switch sortBy {
+	case sortByTScore:
+		sort.Slice(results, func(i, j int) bool {
+			return results[i].TScore > results[j].TScore
+		})
+	case sortByLogDice:
+		sort.Slice(results, func(i, j int) bool {
+			return results[i].LogDice > results[j].LogDice
+		})
+	}
 	if len(results) > limit {
 		results = results[:limit]
 	}
