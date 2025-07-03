@@ -90,7 +90,7 @@ func (db *DB) GetLemmaIDsByPrefix(lemmaPrefix string) ([]lemmaMatch, error) {
 			ans = append(
 				ans,
 				lemmaMatch{
-					Value:   string(item),
+					Value:   strings.TrimSpace(string(item)),
 					TokenID: tokenID,
 				},
 			)
@@ -111,7 +111,7 @@ func (db *DB) getLemmaByIDTxn(txn *badger.Txn, tokenID uint32) (string, error) {
 		return "", err
 	}
 
-	return string(lemmaBytes), nil
+	return strings.TrimSpace(string(lemmaBytes)), nil
 }
 
 func (db *DB) GetLemmaByID(tokenID uint32) (string, error) {
@@ -127,7 +127,7 @@ func (db *DB) GetLemmaByID(tokenID uint32) (string, error) {
 			return err
 		}
 
-		lemma = string(lemmaBytes)
+		lemma = strings.TrimSpace(string(lemmaBytes))
 		return nil
 	})
 	return lemma, err
