@@ -249,11 +249,11 @@ func (db *DB) CalculateMeasures(lemma string, corpusSize int, limit int, sortBy 
 				}
 
 				results = append(results, Collocation{
-					RawLemma:     lemmaMatch.Value,
-					RawCollocate: secondLemma,
-					LogDice:      logDice,
-					TScore:       tscore,
-					MutualDist:   mutualPositionToInt(pairDist),
+					RawLemma:      lemmaMatch.Value,
+					RawCollocate:  secondLemma,
+					LogDice:       logDice,
+					TScore:        tscore,
+					RawMutualDist: mutualPositionToInt(pairDist),
 				})
 			}
 			return nil
@@ -286,11 +286,11 @@ func splitByLastUnderscore(s string) (string, string) {
 // ------------------------------------
 
 type Collocation struct {
-	RawLemma     string
-	RawCollocate string
-	LogDice      float64
-	TScore       float64
-	MutualDist   int
+	RawLemma      string
+	RawCollocate  string
+	LogDice       float64
+	TScore        float64
+	RawMutualDist int
 }
 
 func (res *Collocation) LemmaAndFn() (string, string) {
@@ -301,10 +301,14 @@ func (res *Collocation) CollocateAndFn() (string, string) {
 	return splitByLastUnderscore(res.RawCollocate)
 }
 
+func (res Collocation) AvgMutualDist() float32 {
+	return float32(res.RawMutualDist) / 10.0
+}
+
 func (ldr Collocation) TabString() string {
 	lemma1, deprel1 := splitByLastUnderscore(ldr.RawLemma)
 	lemma2, deprel2 := splitByLastUnderscore(ldr.RawCollocate)
-	return fmt.Sprintf("%s\t(%s)\t%s\t(%s)\t%01.2f\t%01.2f", lemma1, deprel1, lemma2, deprel2, ldr.LogDice, ldr.TScore)
+	return fmt.Sprintf("%s\t(%s)\t%s\t(%s)\t%01.2f\t%01.2f\t%01.1f", lemma1, deprel1, lemma2, deprel2, ldr.LogDice, ldr.TScore, ldr.AvgMutualDist())
 }
 
 // --------
