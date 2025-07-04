@@ -40,9 +40,31 @@ func decodeFrequency(data []byte) uint32 {
 	return binary.LittleEndian.Uint32(data)
 }
 
+func decodeFrequencyAndDist(data []byte) (uint32, uint16) {
+	return binary.LittleEndian.Uint32(data[:4]), binary.LittleEndian.Uint16(data[4:])
+}
+
+func mutualPositionToInt(v uint16) int {
+	return 32768 - int(v)
+}
+
+func mutualPositionToUint16(v int) uint16 {
+	if v > 16384 {
+		panic("cannot encode position - distance overflow")
+	}
+	return uint16(32768 + v)
+}
+
 func encodeFrequency(freq uint32) []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, freq)
+	return buf
+}
+
+func encodeFrequencyAndDist(freq uint32, dist uint16) []byte {
+	buf := make([]byte, 6)
+	binary.LittleEndian.PutUint32(buf[:4], freq)
+	binary.LittleEndian.PutUint16(buf[4:], dist)
 	return buf
 }
 

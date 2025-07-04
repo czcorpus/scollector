@@ -56,9 +56,9 @@ func (db *DB) StoreSingleTokenFreqTx(txn *badger.Txn, tokenID uint32, frequency 
 	return txn.Set(key, value)
 }
 
-func (db *DB) StorePairTokenFreqTx(txn *badger.Txn, token1ID, token2ID uint32, frequency uint32) error {
+func (db *DB) StorePairTokenFreqTx(txn *badger.Txn, token1ID, token2ID uint32, frequency uint32, mutualDist uint16) error {
 	key := encodePairTokenKey(token1ID, token2ID)
-	value := encodeFrequency(frequency)
+	value := encodeFrequencyAndDist(frequency, mutualDist)
 	return txn.Set(key, value)
 }
 
@@ -80,7 +80,7 @@ func (db *DB) StoreLemmaTx(txn *badger.Txn, lemma string, tokenID uint32) error 
 func (db *DB) StoreData(
 	tidSeq *tokenIDSequence,
 	singleFreqs map[string]int,
-	pairFreqs map[[2]string]int,
+	pairFreqs map[[2]string][2]int,
 	minPairFreq int) error {
 
 	// use singleFreqs as source of lemmas and create indexes
@@ -112,7 +112,7 @@ func (db *DB) StoreData(
 
 	// Process pair frequencies
 	for lemmaPair, pairFreq := range pairFreqs {
-		if pairFreq < minPairFreq {
+		if pairFreq[0] < minPairFreq {
 			continue
 		}
 		err := db.bdb.Update(func(txn *badger.Txn) error {
@@ -120,7 +120,8 @@ func (db *DB) StoreData(
 				txn,
 				tidSeq.recall(lemmaPair[0]),
 				tidSeq.recall(lemmaPair[1]),
-				uint32(pairFreq),
+				uint32(pairFreq[0]),
+				mutualPositionToUint16(pairFreq[1]),
 			); err != nil {
 				return err
 			}

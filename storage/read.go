@@ -225,8 +225,9 @@ func (db *DB) CalculateMeasures(lemma string, corpusSize int, limit int, sortBy 
 
 				// Get F(x,y) - pair frequency
 				var pairFreq uint32
+				var pairDist uint16
 				err := item.Value(func(val []byte) error {
-					pairFreq = decodeFrequency(val)
+					pairFreq, pairDist = decodeFrequencyAndDist(val)
 					return nil
 				})
 				if err != nil {
@@ -252,6 +253,7 @@ func (db *DB) CalculateMeasures(lemma string, corpusSize int, limit int, sortBy 
 					RawCollocate: secondLemma,
 					LogDice:      logDice,
 					TScore:       tscore,
+					MutualDist:   mutualPositionToInt(pairDist),
 				})
 			}
 			return nil
@@ -288,6 +290,7 @@ type Collocation struct {
 	RawCollocate string
 	LogDice      float64
 	TScore       float64
+	MutualDist   int
 }
 
 func (res *Collocation) LemmaAndFn() (string, string) {
