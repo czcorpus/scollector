@@ -101,7 +101,7 @@ func (db *DB) GetLemmaIDsByPrefix(lemmaPrefix string) ([]lemmaMatch, error) {
 }
 
 func (db *DB) getLemmaByIDTxn(txn *badger.Txn, tokenID uint32) (string, error) {
-	item, err := txn.Get(encodeIDToLemmaKey(tokenID))
+	item, err := txn.Get(tokenIDToRIKey(tokenID))
 	if err != nil {
 		return "", err
 	}
@@ -117,7 +117,7 @@ func (db *DB) getLemmaByIDTxn(txn *badger.Txn, tokenID uint32) (string, error) {
 func (db *DB) GetLemmaByID(tokenID uint32) (string, error) {
 	var lemma string
 	err := db.bdb.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(encodeIDToLemmaKey(tokenID))
+		item, err := txn.Get(tokenIDToRIKey(tokenID))
 		if err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func (db *DB) GetLemmaByID(tokenID uint32) (string, error) {
 }
 
 func getSingleTokenFreqCopy(txn *badger.Txn, tokenID uint32) (uint32, error) {
-	key := encodeSingleTokenKey(tokenID)
+	key := tokenIDToKey(tokenID)
 
 	item, err := txn.Get(key)
 	if err != nil {
@@ -165,7 +165,7 @@ func (db *DB) getSingleTokenFreq(tokenID uint32) (uint32, error) {
 
 // Version that works within an existing transaction
 func (db *DB) getSingleTokenFreqTx(txn *badger.Txn, tokenID uint32, frequency *uint32) error {
-	key := encodeSingleTokenKey(tokenID)
+	key := tokenIDToKey(tokenID)
 
 	item, err := txn.Get(key)
 	if err != nil {

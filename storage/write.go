@@ -51,7 +51,7 @@ func NewTokenIDSequence() *tokenIDSequence {
 // --------------
 
 func (db *DB) StoreSingleTokenFreqTx(txn *badger.Txn, tokenID uint32, frequency uint32) error {
-	key := encodeSingleTokenKey(tokenID)
+	key := tokenIDToKey(tokenID)
 	value := encodeFrequency(frequency)
 	return txn.Set(key, value)
 }
@@ -68,12 +68,12 @@ func (db *DB) CreateTransaction() *badger.Txn {
 
 func (db *DB) StoreLemmaTx(txn *badger.Txn, lemma string, tokenID uint32) error {
 	key := encodeLemmaKey(lemma)
-	value := encodeTokenID(tokenID)
+	value := tokenIDToValue(tokenID)
 	if err := txn.Set(key, value); err != nil {
 		return err
 	}
 	// Store tokenID -> lemma mapping (reverse index)
-	idKey := encodeIDToLemmaKey(tokenID)
+	idKey := tokenIDToRIKey(tokenID)
 	return txn.Set(idKey, []byte(lemma))
 }
 
@@ -149,7 +149,7 @@ func (db *DB) IncrementSingleTokenFreq(tokenID uint32, increment uint32) error {
 		newFreq := currentFreq + increment
 
 		// Store updated frequency
-		key := encodeSingleTokenKey(tokenID)
+		key := tokenIDToKey(tokenID)
 		value := encodeFrequency(newFreq)
 		return txn.Set(key, value)
 	})

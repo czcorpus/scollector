@@ -18,20 +18,29 @@ package storage
 
 import (
 	"encoding/binary"
+	"strings"
 )
 
 const (
-	LemmaToIDPrefix   byte = 0x00 // "lemma" -> tokenID
-	SingleTokenPrefix byte = 0x01 // tokenID -> frequency
-	PairTokenPrefix   byte = 0x02 // (tokenID1, tokenID2) -> frequency
-	IDToLemmaPrefix   byte = 0x03 // tokenID -> "lemma" (reverse lookup)
+	LemmaToIDPrefix    byte = 0x00 // "lemma" -> tokenID
+	SingleTokenPrefix  byte = 0x01 // tokenID -> frequency
+	PairTokenPrefix    byte = 0x02 // (tokenID1, tokenID2) -> frequency
+	IDToLemmaPrefix    byte = 0x03 // tokenID -> "lemma" (reverse lookup)
+	PoSLemmaToIDPrefix byte = 0x04 // "lemma + PoS" -> tokenID
+	IDToPoSLemmaPrefix byte = 0x05 // tokenID -> "lemma + PoS" (reverse lookup)
 )
 
 // encodeLemmaKey creates a byte key representation for Lemma -> Lemma ID entries
 func encodeLemmaKey(lemma string) []byte {
+	tmp := strings.Split(lemma, " ")
 	lemmaBytes := []byte(lemma)
 	key := make([]byte, 1+len(lemmaBytes))
-	key[0] = LemmaToIDPrefix
+	if len(tmp) == 1 {
+		key[0] = LemmaToIDPrefix
+
+	} else {
+		key[0] = PoSLemmaToIDPrefix
+	}
 	copy(key[1:], lemmaBytes)
 	return key
 }
@@ -76,20 +85,21 @@ func encodePairTokenKey(token1ID, token2ID uint32) []byte {
 	return key
 }
 
-func encodeSingleTokenKey(tokenID uint32) []byte {
+func tokenIDToKey(tokenID uint32) []byte {
 	key := make([]byte, 5)
 	key[0] = SingleTokenPrefix
 	binary.LittleEndian.PutUint32(key[1:5], tokenID)
 	return key
 }
 
-func encodeTokenID(tokenID uint32) []byte {
+func tokenIDToValue(tokenID uint32) []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, tokenID)
 	return buf
 }
 
-func encodeIDToLemmaKey(tokenID uint32) []byte {
+// tokenIDToRIKey creates a key entry for the reverse index
+func tokenIDToRIKey(tokenID uint32) []byte {
 	key := make([]byte, 5)
 	key[0] = IDToLemmaPrefix
 	binary.LittleEndian.PutUint32(key[1:5], tokenID)
