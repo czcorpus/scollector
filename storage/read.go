@@ -306,6 +306,55 @@ func (db *DB) getRawTokenFreqTx(txn *badger.Txn, tokenID uint32, pos, textType b
 
 // ------
 
+type deprelVariant struct {
+	Value string `json:"value"`
+	Freq  int    `json:"freq"`
+}
+
+func (dv deprelVariant) Key() string {
+	return dv.Value
+}
+
+// ------
+
+func (db *DB) GetLemmaDeprelValues(lemmaId uint32) ([]deprelVariant, error) {
+	counts := make(map[uint16]int)
+	err := db.bdb.View(func(txn *badger.Txn) error {
+		pairPrefix := record.AllCollFreqsOfToken(true, lemmaId)
+		opts := badger.IteratorOptions{
+			Prefix:         pairPrefix,
+			PrefetchValues: true,
+			PrefetchSize:   1000,
+		}
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			key := item.Key()
+			decKey := record.DecodeCollFreqKey(key)
+			var collValue record.CollocValue
+			err := item.Value(func(val []byte) error {
+				collValue = record.DecodeCollocValue(val)
+				return nil
+			})
+			if err != nil {
+				// TODO
+				fmt.Fprintf(os.Stderr, "failed to get freqs from db: %s", err)
+				continue
+			}
+			counts[decKey.Deprel] += int(collValue.Freq)
+		}
+		return nil
+	})
+	ans := make([]deprelVariant, len(counts))
+	i := 0
+	for k, v := range counts {
+		ans[i] = deprelVariant{Value: record.UDDeprelFromUint16(k).Readable, Freq: v}
+	}
+	return ans, err
+}
+
 type SearchFilter func(pos1 byte, deprel uint16, pos2 byte, textType byte, dist float64) bool
 
 // ------

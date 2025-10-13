@@ -43,11 +43,12 @@ func (otf TokenFreq) IsZero() bool {
 
 func (otf TokenFreq) String() string {
 	return fmt.Sprintf(
-		"TokenFreq(lemma: %s, pos: %s, freq: %d, tt: %x)",
+		"TokenFreq(lemma: %s, pos: %s, freq: %d, tt: %s (%x))",
 		otf.Lemma,
 		UDPoSMapping.GetRev(otf.PoS.Byte()),
 		otf.Freq,
-		otf.TextType,
+		otf.TextType.Readable,
+		otf.TextType.Raw,
 	)
 }
 
