@@ -111,6 +111,9 @@ func DecodeCollFreqKey(key []byte) DecodedKey {
 // AllCollFreqsOfToken generates a db key to search for all
 // the collocation freq. records of this token (where the token
 // is the first one).
+// The isHead argument decides which role the token plays:
+// isHead == true: [tokenID] <-- deprel --- [SEARCHED_TOKEN]
+// isHead == false: [tokenID] --- deprel --> [SEARCHED_TOKEN]
 func AllCollFreqsOfToken(isHead bool, tokenID uint32) []byte {
 	key := make([]byte, 5)
 	if isHead {
