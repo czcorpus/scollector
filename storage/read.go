@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -306,21 +307,25 @@ func (db *DB) getRawTokenFreqTx(txn *badger.Txn, tokenID uint32, pos, textType b
 
 // ------
 
-type deprelVariant struct {
+type DeprelVariant struct {
 	Value string `json:"value"`
 	Freq  int    `json:"freq"`
 }
 
-func (dv deprelVariant) Key() string {
+func (dv DeprelVariant) Key() string {
 	return dv.Value
 }
 
 // ------
 
-func (db *DB) GetLemmaDeprelValues(lemmaId uint32) ([]deprelVariant, error) {
+// GetLemmaDeprelValues searches for all the deprel variants providing
+// the lemmaId is in role of a dependent token (i.e. not a "head").
+// Found values are returned in the order starting with the most frequent
+// items.
+func (db *DB) GetLemmaDeprelValues(lemmaId uint32) ([]DeprelVariant, error) {
 	counts := make(map[uint16]int)
 	err := db.bdb.View(func(txn *badger.Txn) error {
-		pairPrefix := record.AllCollFreqsOfToken(true, lemmaId)
+		pairPrefix := record.AllCollFreqsOfToken(false, lemmaId)
 		opts := badger.IteratorOptions{
 			Prefix:         pairPrefix,
 			PrefetchValues: true,
@@ -339,19 +344,22 @@ func (db *DB) GetLemmaDeprelValues(lemmaId uint32) ([]deprelVariant, error) {
 				return nil
 			})
 			if err != nil {
-				// TODO
-				fmt.Fprintf(os.Stderr, "failed to get freqs from db: %s", err)
-				continue
+				return fmt.Errorf("failed to get colloc value from db: %w", err)
 			}
 			counts[decKey.Deprel] += int(collValue.Freq)
 		}
 		return nil
 	})
-	ans := make([]deprelVariant, len(counts))
+	if err != nil {
+		return []DeprelVariant{}, fmt.Errorf("failed to get lemma deprel values: %w", err)
+	}
+	ans := make([]DeprelVariant, len(counts))
 	i := 0
 	for k, v := range counts {
-		ans[i] = deprelVariant{Value: record.UDDeprelFromUint16(k).Readable, Freq: v}
+		ans[i] = DeprelVariant{Value: record.UDDeprelFromUint16(k).Readable, Freq: v}
+		i++
 	}
+	slices.SortFunc(ans, func(v1, v2 DeprelVariant) int { return v2.Freq - v1.Freq })
 	return ans, err
 }
 
